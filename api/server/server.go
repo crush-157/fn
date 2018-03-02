@@ -18,6 +18,7 @@ import (
 	"github.com/fnproject/fn/api/agent"
 	"github.com/fnproject/fn/api/agent/hybrid"
 	agent_grpc "github.com/fnproject/fn/api/agent/nodepool/grpc"
+	agent_k8s "github.com/fnproject/fn/api/agent/nodepool/k8s"
 	"github.com/fnproject/fn/api/common"
 	"github.com/fnproject/fn/api/datastore"
 	"github.com/fnproject/fn/api/id"
@@ -33,20 +34,24 @@ import (
 )
 
 const (
-	EnvLogLevel       = "FN_LOG_LEVEL"
-	EnvLogDest        = "FN_LOG_DEST"
-	EnvLogPrefix      = "FN_LOG_PREFIX"
-	EnvMQURL          = "FN_MQ_URL"
-	EnvDBURL          = "FN_DB_URL"
-	EnvLOGDBURL       = "FN_LOGSTORE_URL"
-	EnvRunnerURL      = "FN_RUNNER_API_URL"
-	EnvNPMAddress     = "FN_NPM_ADDRESS"
-	EnvLBPlacementAlg = "FN_PLACER"
-	EnvNodeType       = "FN_NODE_TYPE"
-	EnvPort           = "FN_PORT" // be careful, Gin expects this variable to be "port"
-	EnvGRPCPort       = "FN_GRPC_PORT"
-	EnvAPICORS        = "FN_API_CORS"
-	EnvZipkinURL      = "FN_ZIPKIN_URL"
+	EnvLogLevel        = "FN_LOG_LEVEL"
+	EnvLogDest         = "FN_LOG_DEST"
+	EnvLogPrefix       = "FN_LOG_PREFIX"
+	EnvMQURL           = "FN_MQ_URL"
+	EnvDBURL           = "FN_DB_URL"
+	EnvLOGDBURL        = "FN_LOGSTORE_URL"
+	EnvRunnerURL       = "FN_RUNNER_API_URL"
+	EnvNPMAddress      = "FN_NPM_ADDRESS"
+	EnvLBPlacementAlg  = "FN_PLACER"
+	EnvLBNodePool      = "FN_NODEPOOL"
+	EnvLBK8sNamespace  = "FN_K8S_NAMESPACE"
+	EnvLBK8sSelector   = "FN_K8S_SELECTOR"
+	EnvLBK8sTargetPort = "FN_K8S_TARGET_PORT"
+	EnvNodeType        = "FN_NODE_TYPE"
+	EnvPort            = "FN_PORT" // be careful, Gin expects this variable to be "port"
+	EnvGRPCPort        = "FN_GRPC_PORT"
+	EnvAPICORS         = "FN_API_CORS"
+	EnvZipkinURL       = "FN_ZIPKIN_URL"
 	// Certificates to communicate with other FN nodes
 	EnvCert     = "FN_NODE_CERT"
 	EnvCertKey  = "FN_NODE_CERT_KEY"
@@ -387,16 +392,33 @@ func WithAgentFromEnv() ServerOption {
 			if s.mq != nil {
 				return errors.New("NuLB nodes must not be configured with a message queue (FN_MQ_URL).")
 			}
-			npmAddress := getEnv(EnvNPMAddress, "")
-			if npmAddress == "" {
-				return errors.New("No FN_NPM_ADDRESS provided for an Fn NuLB node.")
-			}
 			cl, err := hybrid.NewClient(runnerURL)
 			if err != nil {
 				return err
 			}
 			delegatedAgent := agent.New(agent.NewCachedDataAccess(cl))
-			nodePool := agent_grpc.DefaultgRPCNodePool(npmAddress, s.cert, s.certKey, s.certAuthority)
+
+			var nodePool agent.NodePool
+			switch getEnv(EnvLBNodePool, "") {
+			case "k8s":
+				ns := getEnv(EnvLBK8sNamespace, "")
+				labelSelector := getEnv(EnvLBK8sSelector, "")
+				targetPort := getEnv(EnvLBK8sTargetPort, "8080")
+				port, err := strconv.Atoi(targetPort)
+				if err != nil {
+					return err
+				}
+				nodePool, err = agent_k8s.NewK8sPool(ns, labelSelector, port, s.cert, s.certKey, s.certAuthority)
+				if err != nil {
+					return err
+				}
+			default:
+				npmAddress := getEnv(EnvNPMAddress, "")
+				if npmAddress == "" {
+					return errors.New("No FN_NPM_ADDRESS provided for an Fn NuLB node.")
+				}
+				nodePool = agent_grpc.DefaultgRPCNodePool(npmAddress, s.cert, s.certKey, s.certAuthority)
+			}
 			// Select the placement algorithm
 			var placer agent.Placer
 			switch getEnv(EnvLBPlacementAlg, "") {
