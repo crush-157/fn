@@ -116,6 +116,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/dchest/siphash"
+  packages = ["."]
+  revision = "4ebf1de738443ea7f45f02dc394c4df1942a126d"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -377,6 +383,12 @@
   name = "github.com/google/btree"
   packages = ["."]
   revision = "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -726,6 +738,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8ec5b81a0e654c27357133c005be598f725219988d3e196382e81f7928f5c994"
+  inputs-digest = "5ef68d54f0c13f0eda45102911b700d2dede77355a800ad80f1c2e8344469cfb"
   solver-name = "gps-cdcl"
   solver-version = 1
