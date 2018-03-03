@@ -3,13 +3,12 @@ package cp
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os/exec"
 
 	"github.com/google/uuid"
 )
 
-const vagrantPrefix = "fn-vagrant"
+const vboxNamePrefix = "fn-virtualbox"
 
 var whichVBox *exec.Cmd
 
@@ -28,9 +27,11 @@ func NewVirtualBoxCP() (*VirtualBoxCP, error) {
 
 func (v *VirtualBoxCP) provision() error {
 	name := newNodeName()
-	log.Printf("This name %s", name)
 	vboxProvision := exec.Command("vbox", "manage", "createvm", "--name", name, "--ostype", "Linux", "--register")
-	return vboxProvision.Run()
+	err := vboxProvision.Run()
+	if err != nil {
+		return err
+	}
 }
 
 func (v *VirtualBoxCP) GetLBGRunners(lgbId string) ([]*Runner, error) {
